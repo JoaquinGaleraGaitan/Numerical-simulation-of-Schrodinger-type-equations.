@@ -1,0 +1,2 @@
+# Numerical-simulation-of-Schrodinger-type-equations.
+Repositorio de las simulaciones numéricas desarrolladas para mi TFG: "Simulación numérica de ecuaciones tipo Schrodinger". El siguiente repositorio incluye simulaciones en varias dimensiones de problemas físicos concretos donde se resuelve la ecuación de Schrodinger mediante los métodos numéricos de las diferencias finitas y los elementos finitos.
