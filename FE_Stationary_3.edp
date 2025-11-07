@@ -1,4 +1,4 @@
-// Finite Elements Method: Time independent Schrödinger equation in 2D
+// Finite Element Method: Time independent Schrödinger equation in 2D
 // Infinite Square Well with Circular Perturbation 
 
 real L = 1.0;        // length of the box
