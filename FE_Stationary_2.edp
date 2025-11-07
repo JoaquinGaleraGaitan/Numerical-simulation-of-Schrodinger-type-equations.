@@ -1,0 +1,70 @@
+// Finite Elements Method: Time independent Schrödinger equation in 2D
+// Infinite Square Well with Lineal Radial perturbation
+
+real L = 1.0;        // length of the box
+real hbar = 1.0545718e-34; // (J·s)
+real m    = 9.10938356e-31; // (kg)
+
+int npoints = 40;    // number of mesh points per length unit 
+int N = 24;          // number of eigenvalues to calculate
+real[int] Evalues(N); // vector to store the eigenvalues
+
+///// BOUNDARY DEFINITIONS /////
+border lower(t=0,L) { x = t; y = 0; label=1; };
+border right(t=0,L) { x = L; y = t; label=1; };
+border upper(t=L,0) { x = t; y = L; label=1; };
+border left(t=L,0) { x = 0; y = t; label=1; };
+
+///// CREATE MESH /////
+mesh Th = buildmesh(lower(npoints*L*pi) + right(npoints*pi) + upper(npoints*L*pi) + left(npoints*pi));
+
+///// VISUALISE THE MESH /////
+plot(Th, wait=1);
+
+///// DEFINE GAUSSIAN POTENTIAL /////
+func real Vtilda(real x, real y) {
+    real r = sqrt((x - L/2.0)^2 + (y - L/2.0)^2);
+    return 10000*r^2;
+}
+
+///// DECLARE FEM SPACE AND VARIABLES /////
+fespace Vh(Th,P2); // finite element P2 space
+Vh u,v;
+
+///// EVALUATE THE POTENTIAL ON THE FEM SPACE /////
+Vh Vmesh;
+Vmesh = Vtilda(x,y);
+
+///// PLOT THE POTENTIAL OVER THE MESH /////
+plot(Vmesh, value=true, fill=true, wait=1, cmm="Potencial gaussiano");
+
+///// DEFINE THE VARF FOR THE SCHRÖDINGER PROBLEM /////
+varf a(u,v) = int2d(Th)(0.5*(dx(u)*dx(v) + dy(u)*dy(v)) + Vtilda(x,y)*u*v)
+              + on(1,u=0); // condiciones de Dirichlet
+
+varf b(u,v) = int2d(Th)(u*v);
+
+///// CREATE MATRICES /////
+matrix A = a(Vh,Vh,solver=sparsesolver, tgv=-1);
+matrix B = b(Vh,Vh, tgv=-1);
+
+///// DECLARE ARRAY TO HOLD EIGENFUNCTIONS /////
+Vh[int] Efunctions(N);
+
+///// SOLVE THE EIGENVALUE PROBLEM /////
+int k = EigenValue(A, B, sym=true, sigma=0, value=Evalues, vector=Efunctions);
+
+///// PRINT THE EIGENVALUES /////
+cout << "Eigenvalues:" << endl;
+cout << Evalues << endl;
+
+///// CALCULATE PROBABILITY DENSITIES |ψ|² /////
+Vh[int] Eprobability(N);
+for (int i=0; i<k; i++) {
+    Eprobability[i] = Efunctions[i]^2; // |ψ|²
+    }
+
+int i=4;
+plot(Eprobability[i], value=true, fill=true, wait=1);
+
+
