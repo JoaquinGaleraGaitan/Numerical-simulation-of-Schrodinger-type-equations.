@@ -1,0 +1,96 @@
+// Finite Element Method: Time dependent Schrödinger equation in 2D
+// Infinite Square Well — Two Gaussian Wavepacket Collision (V = 0)
+
+real L = 10.0;  
+real hbar = 1.0; 
+real m = 1.0; 
+complex imaginary = 0. + 1.0i;
+
+int npoints = 200;   // mesh points
+real dt = 0.01;      // temporary step
+
+// ----- BOUNDARY DEFINITIONS -----
+border lower(t=0,L) { x = t; y = 0; label=1; };
+border right(t=0,L) { x = L; y = t; label=1; };
+border upper(t=L,0) { x = t; y = L; label=1; };
+border left(t=L,0) { x = 0; y = t; label=1; };
+
+// ----- MESH -----
+mesh Th = buildmesh(lower(npoints) + right(npoints) + upper(npoints) + left(npoints));
+plot(Th, wait=1);
+
+// ----- FUNCTION SPACES -----
+fespace Vh(Th, P1);
+Vh<complex> u, v, uu;
+Vh ur, Vplot, urplot;
+
+// ----- POTENTIAL (zero everywhere) -----
+func V = 0.0;
+Vplot = V;
+
+
+// ----- SCHRÖDINGER PROBLEM -----
+problem schrodinger(u,v)
+    = int2d(Th)(u*v + (imaginary*dt/4.0)*(dx(u)*dx(v) + dy(u)*dy(v)) + (imaginary*dt/2.0)*V*u*v)
+    + int2d(Th)(-uu*v + (imaginary*dt/4.0)*(dx(uu)*dx(v) + dy(uu)*dy(v)) + (imaginary*dt/2.0)*V*uu*v)
+    + on(1, u=0);
+
+// ----- INITIAL CONDITIONS -----
+real t = 0;
+real sigma = 0.5;
+
+// Paquete 1
+real x01 = 3.0;  
+real y01 = 5.0;  
+real kx1 = +8.0;  
+real ky1 = 0.0;  
+
+// Paquete 2
+real x02 = 7.0;  
+real y02 = 5.0;  
+real kx2 = -8.0;  
+real ky2 = 0.0;  
+
+// Superposition of two gaussian wave packets 
+uu = exp(-((x-x01)^2 + (y-y01)^2)/(2*sigma^2)) * exp(imaginary*(kx1*x + ky1*y))
+   + exp(-((x-x02)^2 + (y-y02)^2)/(2*sigma^2)) * exp(imaginary*(kx2*x + ky2*y));
+
+// Normalization
+real norm = sqrt(int2d(Th)(abs(uu)^2));
+uu = uu / norm;
+
+// ---- Time steps to save ----
+real[int] timesToSave(6);
+timesToSave[0] = 0.01;
+timesToSave[1] = 0.10;
+timesToSave[2] = 0.15;
+timesToSave[3] = 0.20;
+timesToSave[4] = 0.28;
+timesToSave[5] = 0.48;
+int Nsave = timesToSave.n;
+
+// ---- temporal loop ----
+for (int m = 0; m <= 3/dt; m++) {
+    t = t + dt;
+
+    // Solve the temporal loop
+    schrodinger;
+    uu = u;
+
+
+    // Calculate the modulus and sum the potential
+    ur = abs(u);
+    urplot = ur;
+
+    // Show evolution
+    plot(urplot, wait=false, fill=true, value=false, cmm="t = " + t);
+
+    // Save png
+    for (int i = 0; i < Nsave; i++) {
+        if (abs(t - timesToSave[i]) < dt/2) { // tolerancia temporal
+            string imagename = "frame_t" + t + ".png";
+            plot(urplot, cmm="t = " + t, fill=true, value=false, wait=false, pdf="frame_t" + t + ".pdf");
+            cout << "Guardado: " << imagename << endl;
+        }
+    }
+}
