@@ -1,4 +1,4 @@
-// Finite Element Method: Time dependent Schrödinger equation in 2D
+// Finite Element Method: Time dependent Schrödinger equation in 2D 
 // Double Slit, wave front
 
 real L = 10.0;  
