@@ -81,7 +81,7 @@ for (int m = 0; m <= 3/dt; m++) {
         if (abs(t - timesToSave[i]) < dt/2) { // tolerancia temporal
             string imagename = "frame_t" + t + ".png";
             plot(urplot, cmm="t = " + t, fill=true, value=false, wait=false, ps=imagename);
-            cout << "Guardado: " << imagename << endl;
+            cout << "Guardado: " << imagename << endl; 
         }
     }
 }
