@@ -1,5 +1,5 @@
 // Finite Elements Method: Time dependent Schrödinger equation in 2D
-// Infinite Square Well, wave packet
+// Single Slit, wave packet 
 
 real L = 10.0;  
 
