@@ -1,0 +1,109 @@
+// Finite Element Method: Time dependent Schrödinger equation in 2D
+// Infinite Square Well, wave front
+
+real L = 10.0;  
+
+real hbar = 1.0; 
+real m    = 1.0; 
+
+complex imaginary = 0. + 1.0i;
+int npoints = 200;    // mesh points
+real dt = 0.05;       // temporal step
+
+// ----- BOUNDARY DEFINITIONS -----
+border lower(t=0,L) { x = t; y = 0; label=1; };
+border right(t=0,L) { x = L; y = t; label=1; };
+border upper(t=L,0) { x = t; y = L; label=1; };
+border left(t=L,0) { x = 0; y = t; label=1; };
+
+// ----- MESH -----
+mesh Th = buildmesh(lower(npoints) + right(npoints) + upper(npoints) + left(npoints));
+plot(Th, wait=1);
+
+fespace Vh(Th, P1); // real space
+Vh<complex> u, v, uu; // complex functions
+Vh ur; 
+Vh Vplot; 
+Vh urplot; 
+
+real slitX = L/2;         // barrier position
+real slitWidth = 0.05;    // barrier width
+real aperture = 0.3;      // double slit height
+real slitGap  = 1.0;      // distance between the centers of the slits
+real barrierHeight = 1e2; // infinite barrier
+
+// centers of the slits
+real y1 = L/2 - slitGap/2;
+real y2 = L/2 + slitGap/2;
+
+// Definition of the potential
+func V = ( abs(x - slitX) < slitWidth
+           && ! ( (y > y1 - aperture/2 && y < y1 + aperture/2)   // rendija 1
+                ||(y > y2 - aperture/2 && y < y2 + aperture/2) ) ) 
+         ? barrierHeight : 0.0;
+
+Vplot = V;   // projection to the finite element space
+
+// ---- Save once the potential ----
+{
+    ofstream fout("potencial.txt");
+    fout << "# x y V(x,y)" << endl;
+    for (int j = 0; j < Th.nv; j++) {
+        real xj = Th(j).x;
+        real yj = Th(j).y;
+        real Vj = Vplot[][j];
+        fout << xj << " " << yj << " " << Vj << endl;
+    }
+    cout << "Guardado: potencial.txt" << endl;
+}
+
+problem schrodinger(u,v)
+    = int2d(Th)(u*v + (imaginary*dt/4.0)*(dx(u)*dx(v)+dy(u)*dy(v))+ (imaginary*dt/2.0)*V*u*v)
+    + int2d(Th)(-uu*v +(imaginary*dt/4.0)*(dx(uu)*dx(v)+dy(uu)*dy(v)) - (imaginary*dt/2.0)*V*uu*v )
+    + on(1, u=0);
+
+
+real t=0;
+real x0 = 2.50;      // centro en x
+real y0 = 5.0;      // centro en y
+real sigmax = 0.5;   // ancho del paquete
+real sigmay = 3.0; 
+real kx = 10.0;     // número de onda en x
+real ky = 0.0;      // número de onda en y
+
+uu = exp(-((x-x0)^2)/(2*sigmax^2)) * exp(-((y-y0)^2)/(2*sigmay^2)) * exp(imaginary*(kx*x));
+real norm = sqrt(int2d(Th)(abs(uu)^2));
+uu = uu / norm;
+
+// ---- Define the time steps to save ----
+real[int] timesToSave(4);
+timesToSave[0] = 0.05;
+timesToSave[1] = 0.50;
+timesToSave[2] = 1.05;
+timesToSave[3] = 2.0;
+int Nsave = timesToSave.n;
+
+// ---- Temporal loop ----
+for (int m = 0; m <= 3/dt; m++) {
+    t = t + dt;
+
+    // Solve the temporal loop
+    schrodinger;
+    uu = u;
+
+    // Save the probability density
+    for (int i = 0; i < Nsave; i++) {
+        if (abs(t - timesToSave[i]) < dt/2) { // tolerancia temporal
+            string filename = "psi2_t" + t + ".txt";
+            ofstream fout(filename);
+            fout << "# x y |psi|^2" << endl;
+            for (int j = 0; j < Th.nv; j++) {
+                real xj = Th(j).x;
+                real yj = Th(j).y;
+                real psi2 = abs(u[][j])^2;
+                fout << xj << " " << yj << " " << psi2 << endl;
+            }
+            cout << "Guardado: " << filename << endl;
+        }
+    }
+}
