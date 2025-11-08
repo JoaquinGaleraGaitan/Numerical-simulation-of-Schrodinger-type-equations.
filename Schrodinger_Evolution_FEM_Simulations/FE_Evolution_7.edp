@@ -1,5 +1,5 @@
 // Finite Elements Method: Time dependent Schrödinger equation in 2D
-// Single Slit, wave front
+// Single Slit, wave front 
 
 real L = 10.0;  
 
