@@ -1,0 +1,90 @@
+// Finite Element Method: Time dependent Schrödinger equation in 2D
+// Infinite Square Well — Single Gaussian Wavepacket (V = 0)
+
+real L = 10.0;  
+
+real hbar = 1.0; 
+real m    = 1.0; 
+complex imaginary = 0. + 1.0i;
+
+int npoints = 400;    // mesh points
+real dt = 0.01;       // temporal step
+
+// ----- BOUNDARY DEFINITIONS -----
+border lower(t=0,L) { x = t; y = 0; label=1; };
+border right(t=0,L) { x = L; y = t; label=1; };
+border upper(t=L,0) { x = t; y = L; label=1; };
+border left(t=L,0) { x = 0; y = t; label=1; };
+
+// ----- MESH -----
+mesh Th = buildmesh(lower(npoints) + right(npoints) + upper(npoints) + left(npoints));
+plot(Th, wait=1);
+
+// ----- FUNCTION SPACES -----
+fespace Vh(Th, P1);
+Vh<complex> u, v, uu;
+Vh ur, Vplot, urplot;
+
+// ----- POTENTIAL (zero everywhere) -----
+real barrierHeight = 1e3; 
+func V = 0.0;
+Vplot = V;
+
+// ----- SCHRÖDINGER PROBLEM -----
+problem schrodinger(u,v)
+    = int2d(Th)(
+          u*v
+        + (imaginary*dt/4.0)*(dx(u)*dx(v) + dy(u)*dy(v))
+        + (imaginary*dt/2.0)*V*u*v )
+    + int2d(Th)(
+         -uu*v
+         + (imaginary*dt/4.0)*(dx(uu)*dx(v) + dy(uu)*dy(v))
+         - (imaginary*dt/2.0)*V*uu*v )
+    + on(1, u=0);
+
+// ----- INITIAL CONDITIONS -----
+real t = 0;
+real x0 = 3.0;      // center at x
+real y0 = 5.0;      // center at y
+real sigma = 0.3;   // width 
+real kx = 14.0;      // wave number at x
+real ky = 0.0;      // wave number at y
+
+uu = exp(-((x-x0)^2 + (y-y0)^2)/(2*sigma^2))
+   * exp(imaginary*(kx*x + ky*y));
+
+real norm = sqrt(int2d(Th)(abs(uu)^2));
+uu = uu / norm;
+
+// ---- Define the time steps to save ----
+real[int] timesToSave(4);
+timesToSave[0] = 0.05;
+timesToSave[1] = 0.25;
+timesToSave[2] = 0.40;
+timesToSave[3] = 0.80;
+int Nsave = timesToSave.n;
+
+// ---- TEMPORAL LOOP ----
+for (int m = 0; m <= 3/dt; m++) {
+    t = t + dt;
+
+    // Solve the temporal loop
+    schrodinger;
+    uu = u;
+
+    // Calculate the modulus and add the potential
+    ur = abs(u);
+    urplot = ur + (Vplot/barrierHeight);
+
+    // Show the evolution
+    plot(urplot, wait=false, fill=true, value=false, cmm="t = " + t);
+
+    // Save pdf
+    for (int i = 0; i < Nsave; i++) {
+        if (abs(t - timesToSave[i]) < dt/2) {
+            string imagename = "frame_t" + t + ".pdf";
+            plot(urplot, cmm="t = " + t, fill=true, value=false, wait=false, pdf=imagename);
+            cout << "Guardado: " << imagename << endl;
+        }
+    }
+}
